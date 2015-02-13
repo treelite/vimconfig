@@ -60,6 +60,14 @@ set noerrorbells
 colorscheme yytextmate
 set guifont=menlo:h12
 
+"InsertMode use IME else set imdisable                    
+"need to disable macvim'option(COMMAND+,):  Draw marked text inline
+set imdisable                                             
+set imsearch=0                                            
+autocmd! CompleteDone  * set imdisable|set iminsert=0 "for macvim
+autocmd! InsertEnter * set noimdisable|set iminsert=0     
+autocmd! InsertLeave * set imdisable|set iminsert=0  
+
 nmap <S-H> :bp<CR>
 nmap <S-L> :bn<CR>
 nmap <D-k> :cp<CR>
