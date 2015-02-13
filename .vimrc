@@ -62,16 +62,28 @@ set guifont=menlo:h12
 
 nmap <S-H> :bp<CR>
 nmap <S-L> :bn<CR>
+nmap <D-k> :cp<CR>
+nmap <D-j> :cn<CR>
 nmap <F2> :nohlsearch<CR>
 nmap <F3> :NERDTreeToggle<CR>
 nmap <F4> :JSBeautify<CR>
-nmap <F5> :JSHint<CR>
-nmap <F7> :CtrlP<CR>
+" nmap <F5> :JSHint<CR>
+nmap <F5> :FECS<CR>
+nmap <C-i> :JSC<CR>
+nmap <D-K> :JSCprev<CR>
+nmap <D-J> :JSCnext<CR>
 nmap <F8> :TagbarToggle<CR>
 
 let g:miniBufExplorerMoreThanOne = 0
 let g:neocomplcache_enable_at_startup = 1
 let g:vim_markdown_folding_disabled = 1
+
+" multiple-cursors 配置
+let g:multi_cursor_use_default_mapping = 0
+let g:multi_cursor_next_key = '<M-n>'
+let g:multi_cursor_prev_key = '<M-p>'
+let g:multi_cursor_skip_key = '<M-x>'
+let g:multi_cursor_quit_key = '<Esc>'
 
 " For Win32 GUI: remove 't' flag from 'guioptions': no tearoff menu entries
 " let &guioptions = substitute(&guioptions, "t", "", "g")
@@ -149,6 +161,84 @@ function! s:beautify()
 
 endfunction
 
+function! s:edpHint()
+    let cmdline = ['edp']
+
+    let filename = expand('%')
+    let suffix = strpart(filename, strridx(filename, '.') + 1)
+
+    " 暂时只做了JS的检查
+    if (suffix != 'js')
+        return
+    endif
+
+    call add(cmdline, 'jshint')
+    call add(cmdline, getcwd().'/'.filename)
+
+    let res = system(join(cmdline, ' '))
+
+    let lines = split(res, "\n")
+
+    call filter(lines, 'strlen(v:val) > 0')
+
+    cclose
+
+    if len(lines) == 1
+        echo lines[0]
+        return
+    endif
+
+    call remove(lines, 0)
+
+    let max = len(lines)
+    let index = 0
+
+    let qflist = []
+    while index < max
+        let item = split(lines[index], ':')
+        let index = index + 1
+
+        if (len(item) <= 1)
+            continue
+        endif
+
+        let head = split(item[0], ' ')
+        call remove(item, 0)
+        let text = join(item, ':')
+
+        let o = {}
+        let o.bufnr = bufnr('%')
+        let o.lnum = str2nr(head[4])
+        let o.col = str2nr(head[6])
+        let o.text = text
+        let o.type = toupper(strpart(head[1], 0, 1))
+        call add(qflist, o)
+
+    endwhile
+
+    echo 'There are '.len(qflist).' errors found!'
+    call setqflist(qflist)
+    belowright copen
+
+endfunction
+
+" color conversion
+function! s:color(str)
+    let value = ''
+    if (stridx(a:str, '#') == 0)
+        let res = []
+        let str = strpart(a:str, 1)
+        while (strlen(str) > 0)
+            call add(res, printf('%d', '0x' . strpart(str, 0, 2)))
+            let str = strpart(str, 2)
+        endwhile
+        let value = 'rgb(' . join(res, ',') . ')'
+    else
+        let value = a:str 
+    endif
+    return value
+endfunction
+
 " vim-airline setting
 set laststatus=2
 let g:airline#extensions#tabline#enabled = 1
@@ -170,3 +260,6 @@ let g:airline_symbols.paste = 'ρ'
 let g:airline_symbols.whitespace = 'Ξ'
 
 command! JSBeautify call s:beautify()
+command! -nargs=1 Color echo s:color(<f-args>)
+
+command! EdpHint call s:edpHint()
